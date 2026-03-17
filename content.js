@@ -29,6 +29,9 @@
   let selectedProjectId = null;
   let selectedProjectCode = null;
   let projectsList = [];
+  // プロジェクト全体の件数
+  let projectTotalCount = 0;
+  let projectOpenCount = 0;
 
   // ドラッグ関連
   let dragStart = null;
@@ -60,6 +63,27 @@
     } catch (e) { /* ignore */ }
   }
 
+  async function fetchProjectCounts() {
+    if (!selectedProjectId) { projectTotalCount = 0; projectOpenCount = 0; updateToolbarCounts(); return; }
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/issues?project_id=eq.${selectedProjectId}&select=id,status`,
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+      );
+      if (res.ok) {
+        const all = await res.json();
+        projectTotalCount = all.length;
+        projectOpenCount = all.filter(i => i.status !== "完了" && i.status !== "対応なし").length;
+      }
+    } catch (e) { /* ignore */ }
+    updateToolbarCounts();
+  }
+
+  function updateToolbarCounts() {
+    const el = document.getElementById("sc-toolbar-counts");
+    if (el) el.textContent = `プロジェクト全体：未完了${projectOpenCount}件 / 全${projectTotalCount}件`;
+  }
+
   function updateProjectSelector() {
     const sel = document.getElementById("sc-project-select");
     if (!sel) return;
@@ -72,10 +96,19 @@
     toolbar = document.createElement("div");
     toolbar.id = "sc-toolbar";
     toolbar.innerHTML = `
-      <span id="sc-toolbar-icon">✓</span>
-      <span>SiteCheck — クリックまたはドラッグで指摘箇所を選択</span>
+      <div class="sc-toolbar-left">
+        <span id="sc-toolbar-icon">✓</span>
+        <span>SiteCheck — クリックまたはドラッグで指摘箇所を選択</span>
+      </div>
+      <div class="sc-toolbar-right">
+        <span class="sc-toolbar-label">修正依頼一覧</span>
+        <span class="sc-toolbar-counts" id="sc-toolbar-counts">プロジェクト全体：未完了0件 / 全0件</span>
+        <button class="sc-toolbar-close" id="sc-toolbar-close">✕</button>
+      </div>
     `;
     document.body.appendChild(toolbar);
+
+    document.getElementById("sc-toolbar-close").addEventListener("click", deactivate);
 
     document.body.style.paddingTop = "44px";
   }
@@ -594,15 +627,6 @@
     chrome.storage.local.set({ sidebarOpen: true });
 
     const issues = window.__sitecheck_issues || [];
-    const totalCount = issues.length;
-
-    // ステータス別バッジ
-    const counts = {};
-    issues.forEach(i => { counts[i.status] = (counts[i.status] || 0) + 1; });
-    const statBadges = Object.entries(counts).map(([status, count]) => {
-      const sc = STATUS_COLOR[status] || STATUS_COLOR["未対応"];
-      return `<span class="sc-page-stat-badge" style="background:${sc.bg};color:${sc.text};border:1px solid ${sc.border}">${status} ${count}</span>`;
-    }).join("");
 
     sidePanel = document.createElement("div");
     sidePanel.id = "sc-side-panel";
@@ -610,21 +634,17 @@
       `<option value="${p.id}" data-code="${p.code}" ${p.id === selectedProjectId ? 'selected' : ''}>${p.name}</option>`
     ).join("");
 
+    // ページ別件数テキスト生成
+    const pageStatsText = buildPageStatsText(issues);
+
     sidePanel.innerHTML = `
-      <div class="sc-panel-header">
-        <span class="sc-panel-title">修正依頼一覧</span>
-        <span class="sc-panel-count" id="sc-panel-count">（現在のページの依頼：全${totalCount}件）</span>
-        <button class="sc-panel-close" id="sc-panel-close">✕</button>
-      </div>
       <div class="sc-panel-project-row">
         <select class="sc-panel-filter" id="sc-project-select" style="flex:1;font-weight:600">
           <option value="">プロジェクトを選択</option>
           ${projectOpts}
         </select>
       </div>
-      <div class="sc-panel-stats-row" id="sc-panel-stats-row">
-        ${statBadges}
-      </div>
+      <div class="sc-panel-page-stats" id="sc-panel-page-stats">${pageStatsText}</div>
       <div class="sc-panel-filters">
         <select class="sc-panel-filter" id="sc-panel-filter-status">
           <option value="">すべてのステータス</option>
@@ -648,7 +668,6 @@
 
     requestAnimationFrame(() => sidePanel.classList.add("sc-panel-open"));
 
-    document.getElementById("sc-panel-close").addEventListener("click", deactivate);
     document.getElementById("sc-panel-filter-status").addEventListener("change", renderPanelList);
     document.getElementById("sc-panel-filter-assignee").addEventListener("change", renderPanelList);
     document.getElementById("sc-project-select").addEventListener("change", (e) => {
@@ -662,6 +681,7 @@
         selectedProjectCode = null;
       }
       chrome.storage.local.set({ selectedProjectId, selectedProjectCode });
+      fetchProjectCounts();
       // issueリフレッシュ
       window.dispatchEvent(new CustomEvent("sitecheck:refresh"));
     });
@@ -672,25 +692,26 @@
     window.addEventListener("sitecheck:issues-updated", onIssuesUpdated);
   }
 
+  function buildPageStatsText(issues) {
+    if (!issues || issues.length === 0) return `<span style="color:#888;font-size:11px">現在のページ：0件</span>`;
+    const counts = {};
+    issues.forEach(i => { counts[i.status] = (counts[i.status] || 0) + 1; });
+    const parts = Object.entries(counts).map(([status, count]) => `${status} ${count}`).join("　");
+    return `<span style="color:#555;font-size:11px">現在のページ：${parts} / 合計 ${issues.length}件</span>`;
+  }
+
   function onIssuesUpdated() {
     renderPanelList();
     updatePanelHeader();
+    fetchProjectCounts();
   }
 
   function updatePanelHeader() {
     const issues = window.__sitecheck_issues || [];
-    const countEl = document.getElementById("sc-panel-count");
-    if (countEl) countEl.textContent = `（現在のページの依頼：全${issues.length}件）`;
 
-    const statsRow = document.getElementById("sc-panel-stats-row");
-    if (statsRow) {
-      const counts = {};
-      issues.forEach(i => { counts[i.status] = (counts[i.status] || 0) + 1; });
-      statsRow.innerHTML = Object.entries(counts).map(([status, count]) => {
-        const sc = STATUS_COLOR[status] || STATUS_COLOR["未対応"];
-        return `<span class="sc-page-stat-badge" style="background:${sc.bg};color:${sc.text};border:1px solid ${sc.border}">${status} ${count}</span>`;
-      }).join("");
-    }
+    // ページ別件数を更新
+    const pageStatsEl = document.getElementById("sc-panel-page-stats");
+    if (pageStatsEl) pageStatsEl.innerHTML = buildPageStatsText(issues);
   }
 
   function closeSidePanel() {
@@ -807,6 +828,7 @@
       selectedProjectCode = result.selectedProjectCode || null;
     }
     fetchProjects();
+    fetchProjectCounts();
     const waitForIssuesAndOpenSidebar = () => {
       if (window.__sitecheck_issues !== undefined) {
         openSidePanel();

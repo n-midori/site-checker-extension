@@ -9,7 +9,7 @@
   color: #F8FAFC;
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
   padding: 0 16px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 13px;
@@ -17,6 +17,47 @@
   z-index: 2147483641;
   box-shadow: 0 2px 12px rgba(0,0,0,0.3);
   cursor: default;
+}
+
+.sc-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sc-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sc-toolbar-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #F8FAFC;
+}
+
+.sc-toolbar-counts {
+  font-size: 11px;
+  font-weight: 400;
+  color: #94A3B8;
+}
+
+.sc-toolbar-close {
+  background: none;
+  border: 1px solid #334155;
+  border-radius: 5px;
+  color: #94A3B8;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+}
+.sc-toolbar-close:hover {
+  background: #1E293B;
+  color: #F8FAFC;
 }
 
 #sc-toolbar-icon {
@@ -232,7 +273,7 @@
 /* ── フォーカスリング ──────────────────────────────────── */
 .sc-btn:focus-visible,
 .sc-form-close:focus-visible,
-.sc-panel-close:focus-visible {
+.sc-toolbar-close:focus-visible {
   outline: 2px solid #3B82F6;
   outline-offset: 2px;
 }
@@ -281,19 +322,13 @@
   transform: translateX(0);
 }
 
-/* ── コンパクトヘッダー ──────────────────────────────────── */
-.sc-panel-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 12px; background: #0F172A; color: #F8FAFC;
+/* ── ページ別件数 ────────────────────────────────────────── */
+.sc-panel-page-stats {
+  padding: 6px 12px;
+  border-bottom: 1px solid #E2E8F0;
   flex-shrink: 0;
+  background: #F8FAFC;
 }
-.sc-panel-title { font-size: 13px; font-weight: 700; }
-.sc-panel-count { font-size: 10px; font-weight: 400; color: #94A3B8; margin-left: 6px; white-space: nowrap; }
-.sc-panel-close {
-  background: none; border: none; color: #64748B; font-size: 14px;
-  cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1;
-}
-.sc-panel-close:hover { color: #F8FAFC; }
 
 /* ── プロジェクト選択行 ──────────────────────────────────── */
 .sc-panel-project-row {
@@ -304,23 +339,6 @@
   background: #EFF6FF;
 }
 
-/* ── ステータスバッジ行 ──────────────────────────────────── */
-.sc-panel-stats-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding: 6px 12px;
-  border-bottom: 1px solid #E2E8F0;
-  flex-shrink: 0;
-  background: #F8FAFC;
-}
-.sc-page-stat-badge {
-  font-size: 10px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 3px;
-  white-space: nowrap;
-}
 
 .sc-panel-filters {
   display: flex; gap: 8px; padding: 8px 12px;
