@@ -32,6 +32,28 @@
   // プロジェクト全体の件数
   let projectTotalCount = 0;
   let projectOpenCount = 0;
+  // プロジェクトステータス色情報
+  let projectStatusColors = {}; // { "未対応": { bg, text, border }, ... }
+
+  const PRIORITY_COLOR = {
+    "高": "#DC2626",
+    "中": "#D97706",
+    "低": "#6B7280",
+  };
+
+  function hexToRgb(hex) {
+    const h = hex.replace("#", "");
+    return { r: parseInt(h.substring(0, 2), 16), g: parseInt(h.substring(2, 4), 16), b: parseInt(h.substring(4, 6), 16) };
+  }
+
+  function makeStatusColors(color) {
+    const { r, g, b } = hexToRgb(color || "#64748B");
+    return {
+      text: color || "#64748B",
+      bg: `rgba(${r},${g},${b},0.08)`,
+      border: `rgba(${r},${g},${b},0.25)`,
+    };
+  }
 
   // ドラッグ関連
   let dragStart = null;
@@ -61,6 +83,25 @@
         updateProjectSelector();
       }
     } catch (e) { /* ignore */ }
+  }
+
+  async function fetchProjectStatuses() {
+    if (!selectedProjectId) { projectStatusColors = {}; return; }
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/project_statuses?project_id=eq.${selectedProjectId}&select=name,color&order=order`,
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+      );
+      if (res.ok) {
+        const statuses = await res.json();
+        projectStatusColors = {};
+        statuses.forEach(s => { projectStatusColors[s.name] = makeStatusColors(s.color); });
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function getStatusColor(statusName) {
+    return projectStatusColors[statusName] || STATUS_COLOR[statusName] || makeStatusColors("#64748B");
   }
 
   async function fetchProjectCounts() {
@@ -681,9 +722,10 @@
         selectedProjectCode = null;
       }
       chrome.storage.local.set({ selectedProjectId, selectedProjectCode });
-      fetchProjectCounts();
-      // issueリフレッシュ
-      window.dispatchEvent(new CustomEvent("sitecheck:refresh"));
+      fetchProjectStatuses().then(() => {
+        fetchProjectCounts();
+        window.dispatchEvent(new CustomEvent("sitecheck:refresh"));
+      });
     });
 
     populateAssigneeFilter();
@@ -696,8 +738,11 @@
     if (!issues || issues.length === 0) return `<span style="color:#888;font-size:11px">現在のページ：0件</span>`;
     const counts = {};
     issues.forEach(i => { counts[i.status] = (counts[i.status] || 0) + 1; });
-    const parts = Object.entries(counts).map(([status, count]) => `${status} ${count}`).join("　");
-    return `<span style="color:#555;font-size:11px">現在のページ：${parts} / 合計 ${issues.length}件</span>`;
+    const parts = Object.entries(counts).map(([status, count]) => {
+      const sc = getStatusColor(status);
+      return `<span style="display:inline-flex;align-items:center;gap:2px;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;background:${sc.bg};color:${sc.text};border:1px solid ${sc.border}">${status} ${count}</span>`;
+    }).join(" ");
+    return `<span style="color:#555;font-size:11px">現在のページ：</span>${parts}<span style="color:#888;font-size:11px"> / 合計 ${issues.length}件</span>`;
   }
 
   function onIssuesUpdated() {
@@ -761,11 +806,12 @@
     const ADMIN_URL = "https://site-checker-one.vercel.app";
 
     listEl.innerHTML = filtered.map(issue => {
-      const sc = STATUS_COLOR[issue.status] || STATUS_COLOR["未対応"];
+      const sc = getStatusColor(issue.status);
       const isDone = issue.status === "完了" || issue.status === "対応なし";
       const adminLink = selectedProjectCode
         ? `${ADMIN_URL}/projects/${selectedProjectCode}?issue=${issue.id}`
         : `${ADMIN_URL}?issue=${issue.id}`;
+      const prioColor = PRIORITY_COLOR[issue.priority] || "#6B7280";
       return `
         <div class="sc-panel-item ${isDone ? 'sc-panel-item-done' : ''}" data-issue-id="${issue.id}">
           <div class="sc-panel-item-header">
@@ -775,7 +821,7 @@
           <div class="sc-panel-item-title">${issue.title}</div>
           ${issue.detail ? `<div class="sc-panel-item-detail">${issue.detail.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
           <div class="sc-panel-item-meta">
-            <span class="sc-panel-item-priority">${issue.priority}</span>
+            <span class="sc-panel-item-priority" style="color:${prioColor}">${issue.priority}</span>
             <span>👤 ${issue.assignee || '未割当'}</span>
             ${issue.reporter ? `<span class="sc-panel-item-reporter">✎ ${issue.reporter}</span>` : ''}
           </div>
@@ -828,7 +874,7 @@
       selectedProjectCode = result.selectedProjectCode || null;
     }
     fetchProjects();
-    fetchProjectCounts();
+    fetchProjectStatuses().then(() => fetchProjectCounts());
     const waitForIssuesAndOpenSidebar = () => {
       if (window.__sitecheck_issues !== undefined) {
         openSidePanel();

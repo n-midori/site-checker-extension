@@ -370,7 +370,7 @@
 .sc-panel-item-header {
   display: flex; align-items: center; gap: 8px; margin-bottom: 4px;
 }
-.sc-panel-item-id { font-size: 11px; font-weight: 700; color: #94A3B8; }
+.sc-panel-item-id { font-size: 13px; font-weight: 700; color: #333333; }
 .sc-panel-item-status {
   font-size: 10px; font-weight: 600; padding: 1px 6px;
   border-radius: 3px; white-space: nowrap;
@@ -382,7 +382,7 @@
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
 .sc-panel-item-detail {
-  font-size: 11px; color: #94A3B8; line-height: 1.5;
+  font-size: 11px; color: #333333; line-height: 1.5;
   max-height: 120px; overflow-y: auto;
   white-space: pre-wrap; word-break: break-word;
   margin-bottom: 4px;
