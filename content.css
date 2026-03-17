@@ -295,6 +295,15 @@
 }
 .sc-panel-close:hover { color: #F8FAFC; }
 
+/* ── プロジェクト選択行 ──────────────────────────────────── */
+.sc-panel-project-row {
+  display: flex;
+  padding: 8px 12px;
+  border-bottom: 1px solid #E2E8F0;
+  flex-shrink: 0;
+  background: #EFF6FF;
+}
+
 /* ── ステータスバッジ行 ──────────────────────────────────── */
 .sc-panel-stats-row {
   display: flex;

@@ -89,12 +89,24 @@
     }
   }
 
+  // ── 選択中プロジェクトIDを取得 ──────────────────────────
+  async function getSelectedProjectId() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get("selectedProjectId", (result) => {
+        resolve(result.selectedProjectId || null);
+      });
+    });
+  }
+
   // ── Supabaseから該当URLの修正依頼を取得 ──────────────────
   async function fetchIssuesForUrl() {
     const currentUrl = window.location.origin + window.location.pathname;
+    const projectId = await getSelectedProjectId();
+    let query = `url=eq.${encodeURIComponent(currentUrl)}&select=id,title,detail,status,assignee,reporter,priority,x,y&order=id`;
+    if (projectId) query += `&project_id=eq.${projectId}`;
     try {
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/issues?url=eq.${encodeURIComponent(currentUrl)}&select=id,title,detail,status,assignee,reporter,priority,x,y&order=id`,
+        `${SUPABASE_URL}/rest/v1/issues?${query}`,
         { headers }
       );
       if (!res.ok) return [];
@@ -102,8 +114,10 @@
     } catch (e) {
       try {
         const fullUrl = window.location.href.split("?")[0];
+        let query2 = `url=eq.${encodeURIComponent(fullUrl)}&select=id,title,detail,status,assignee,reporter,priority,x,y&order=id`;
+        if (projectId) query2 += `&project_id=eq.${projectId}`;
         const res = await fetch(
-          `${SUPABASE_URL}/rest/v1/issues?url=eq.${encodeURIComponent(fullUrl)}&select=id,title,detail,status,assignee,reporter,priority,x,y&order=id`,
+          `${SUPABASE_URL}/rest/v1/issues?${query2}`,
           { headers }
         );
         if (!res.ok) return [];

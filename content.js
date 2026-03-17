@@ -25,6 +25,11 @@
   let clickData = null;
   let isActive = true;
 
+  // プロジェクト関連
+  let selectedProjectId = null;
+  let selectedProjectCode = null;
+  let projectsList = [];
+
   // ドラッグ関連
   let dragStart = null;
   let isDragging = false;
@@ -40,6 +45,27 @@
 
   // インタラクティブ要素のセレクタ
   const INTERACTIVE_SELECTOR = 'a, button, input, select, textarea, [role="button"], [role="link"], [onclick], label, details, summary, [tabindex]';
+
+  // ── プロジェクト一覧取得 ─────────────────────────────────
+  async function fetchProjects() {
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL}/rest/v1/projects?select=id,code,name&order=id`,
+        { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
+      );
+      if (res.ok) {
+        projectsList = await res.json();
+        updateProjectSelector();
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function updateProjectSelector() {
+    const sel = document.getElementById("sc-project-select");
+    if (!sel) return;
+    sel.innerHTML = '<option value="">プロジェクトを選択</option>' +
+      projectsList.map(p => `<option value="${p.id}" data-code="${p.code}" ${p.id === selectedProjectId ? 'selected' : ''}>${p.name}</option>`).join("");
+  }
 
   // ── ツールバー作成 ─────────────────────────────────────────
   function createToolbar() {
@@ -446,6 +472,10 @@
 
   // ── Supabase送信 ──────────────────────────────────────────
   async function submitForm() {
+    if (!selectedProjectId) {
+      showFormError("プロジェクトを選択してください。サイドバーのドロップダウンからプロジェクトを選択してください。");
+      return;
+    }
     const title = document.getElementById("sc-input-title")?.value?.trim();
     if (!title) {
       document.getElementById("sc-input-title").style.borderColor = "#DC2626";
@@ -489,6 +519,7 @@
         y: clickData?.percentY ?? 50,
         created_at: today,
         updated_at: today,
+        project_id: selectedProjectId,
       };
       if (screenshotUrl) {
         issueBody.screenshot_url = screenshotUrl;
@@ -575,11 +606,21 @@
 
     sidePanel = document.createElement("div");
     sidePanel.id = "sc-side-panel";
+    const projectOpts = projectsList.map(p =>
+      `<option value="${p.id}" data-code="${p.code}" ${p.id === selectedProjectId ? 'selected' : ''}>${p.name}</option>`
+    ).join("");
+
     sidePanel.innerHTML = `
       <div class="sc-panel-header">
         <span class="sc-panel-title">修正依頼一覧</span>
         <span class="sc-panel-count" id="sc-panel-count">（現在のページの依頼：全${totalCount}件）</span>
         <button class="sc-panel-close" id="sc-panel-close">✕</button>
+      </div>
+      <div class="sc-panel-project-row">
+        <select class="sc-panel-filter" id="sc-project-select" style="flex:1;font-weight:600">
+          <option value="">プロジェクトを選択</option>
+          ${projectOpts}
+        </select>
       </div>
       <div class="sc-panel-stats-row" id="sc-panel-stats-row">
         ${statBadges}
@@ -610,6 +651,20 @@
     document.getElementById("sc-panel-close").addEventListener("click", deactivate);
     document.getElementById("sc-panel-filter-status").addEventListener("change", renderPanelList);
     document.getElementById("sc-panel-filter-assignee").addEventListener("change", renderPanelList);
+    document.getElementById("sc-project-select").addEventListener("change", (e) => {
+      const val = e.target.value;
+      const opt = e.target.selectedOptions[0];
+      if (val) {
+        selectedProjectId = parseInt(val, 10);
+        selectedProjectCode = opt?.dataset?.code || null;
+      } else {
+        selectedProjectId = null;
+        selectedProjectCode = null;
+      }
+      chrome.storage.local.set({ selectedProjectId, selectedProjectCode });
+      // issueリフレッシュ
+      window.dispatchEvent(new CustomEvent("sitecheck:refresh"));
+    });
 
     populateAssigneeFilter();
     renderPanelList();
@@ -687,6 +742,9 @@
     listEl.innerHTML = filtered.map(issue => {
       const sc = STATUS_COLOR[issue.status] || STATUS_COLOR["未対応"];
       const isDone = issue.status === "完了" || issue.status === "対応なし";
+      const adminLink = selectedProjectCode
+        ? `${ADMIN_URL}/projects/${selectedProjectCode}?issue=${issue.id}`
+        : `${ADMIN_URL}?issue=${issue.id}`;
       return `
         <div class="sc-panel-item ${isDone ? 'sc-panel-item-done' : ''}" data-issue-id="${issue.id}">
           <div class="sc-panel-item-header">
@@ -700,7 +758,7 @@
             <span>👤 ${issue.assignee || '未割当'}</span>
             ${issue.reporter ? `<span class="sc-panel-item-reporter">✎ ${issue.reporter}</span>` : ''}
           </div>
-          <a href="${ADMIN_URL}?issue=${issue.id}" target="_blank" rel="noopener noreferrer" class="sc-panel-item-admin-link" onclick="event.stopPropagation()">管理画面で開く →</a>
+          <a href="${adminLink}" target="_blank" rel="noopener noreferrer" class="sc-panel-item-admin-link" onclick="event.stopPropagation()">管理画面で開く →</a>
         </div>
       `;
     }).join("");
@@ -738,18 +796,24 @@
 
   // ── 起動 ──────────────────────────────────────────────────
   createToolbar();
-  // mousedown/move/up でクリック＋ドラッグ対応
   document.addEventListener("mousedown", onMouseDown, true);
   document.addEventListener("mousemove", onMouseMove, true);
   document.addEventListener("mouseup", onMouseUp, true);
 
-  // 拡張機能ON時にサイドバーを自動表示（issuesの読み込みを待つ）
-  const waitForIssuesAndOpenSidebar = () => {
-    if (window.__sitecheck_issues !== undefined) {
-      openSidePanel();
-    } else {
-      setTimeout(waitForIssuesAndOpenSidebar, 200);
+  // プロジェクト選択状態を復元してからサイドバーを自動表示
+  chrome.storage.local.get(["selectedProjectId", "selectedProjectCode"], (result) => {
+    if (result.selectedProjectId) {
+      selectedProjectId = result.selectedProjectId;
+      selectedProjectCode = result.selectedProjectCode || null;
     }
-  };
-  setTimeout(waitForIssuesAndOpenSidebar, 500);
+    fetchProjects();
+    const waitForIssuesAndOpenSidebar = () => {
+      if (window.__sitecheck_issues !== undefined) {
+        openSidePanel();
+      } else {
+        setTimeout(waitForIssuesAndOpenSidebar, 200);
+      }
+    };
+    setTimeout(waitForIssuesAndOpenSidebar, 500);
+  });
 })();
