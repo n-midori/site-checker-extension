@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "SiteCheck Reporter",
+  "version": "1.1.0",
+  "description": "サイト上の指摘箇所をクリックして修正依頼を送信するChrome拡張機能",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["https://mmqfyzuaqbsibpojuedc.supabase.co/*"],
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
+    "default_title": "SiteCheck: クリックで指摘"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["markers.js"],
+      "css": ["markers.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

@@ -1,0 +1,132 @@
+/* ── ハイライトマーカー（URLパラメータ経由） ──────────────── */
+.sc-highlight-marker {
+  position: absolute;
+  z-index: 2147483630;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+.sc-highlight-dot {
+  width: 32px; height: 32px;
+  background: #EF4444; border: 3px solid #fff; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 12px; font-weight: 800;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 4px 16px rgba(239,68,68,0.6);
+}
+.sc-highlight-pulse {
+  position: absolute; inset: -12px; border-radius: 50%;
+  border: 3px solid rgba(239,68,68,0.6);
+  animation: sc-highlight-anim 1s ease-out infinite;
+}
+@keyframes sc-highlight-anim {
+  0%   { transform: scale(0.7); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* ── 既存Issue マーカー ──────────────────────────────────── */
+.sc-issue-marker {
+  position: absolute; z-index: 2147483620; cursor: pointer;
+  transform: translate(-50%, -50%); transition: transform 0.15s ease;
+}
+.sc-issue-marker:hover {
+  transform: translate(-50%, -50%) scale(1.2); z-index: 2147483625;
+}
+.sc-issue-marker-highlight {
+  animation: sc-marker-flash 0.4s ease-out 3;
+}
+@keyframes sc-marker-flash {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(2) drop-shadow(0 0 8px rgba(59,130,246,0.8)); }
+}
+
+.sc-issue-dot {
+  width: 24px; height: 24px; border: 2px solid #fff; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 10px; font-weight: 800;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* ── Issue ポップアップ（拡充版） ────────────────────────── */
+.sc-issue-popup {
+  position: fixed; z-index: 2147483635; width: 300px;
+  background: #fff; border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25), 0 0 0 1px rgba(0,0,0,0.06);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow: hidden; animation: sc-popup-in 0.15s ease-out;
+}
+@keyframes sc-popup-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.sc-popup-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0;
+}
+.sc-popup-id { font-size: 11px; font-weight: 700; color: #94A3B8; }
+.sc-popup-close {
+  margin-left: auto; background: none; border: none;
+  color: #94A3B8; font-size: 14px; cursor: pointer;
+  padding: 2px 4px; border-radius: 3px; line-height: 1;
+}
+.sc-popup-close:hover { background: #E2E8F0; color: #374151; }
+
+.sc-popup-priority-badge {
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+}
+.sc-priority-高 { background: #FEF2F2; color: #DC2626; }
+.sc-priority-中 { background: #FFFBEB; color: #D97706; }
+.sc-priority-低 { background: #F8FAFC; color: #64748B; }
+
+.sc-popup-title {
+  padding: 10px 12px 4px; font-size: 13px; font-weight: 700;
+  color: #1E293B; line-height: 1.4;
+}
+.sc-popup-detail {
+  padding: 0 12px 8px; font-size: 12px; color: #64748B;
+  line-height: 1.6; max-height: 120px; overflow-y: auto;
+  white-space: pre-wrap; word-break: break-word;
+}
+
+.sc-popup-fields {
+  padding: 0 12px 10px; display: flex; flex-direction: column; gap: 8px;
+}
+.sc-popup-field { display: flex; flex-direction: column; gap: 3px; }
+.sc-popup-label {
+  font-size: 10px; font-weight: 700; color: #94A3B8;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.sc-popup-select {
+  width: 100%; border: 1px solid #E2E8F0; border-radius: 6px;
+  padding: 5px 8px; font-size: 12px; font-family: inherit;
+  color: #1E293B; background: #fff; outline: none; cursor: pointer;
+  box-sizing: border-box;
+}
+.sc-popup-select:focus {
+  border-color: #3B82F6; box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+}
+
+.sc-popup-footer {
+  padding: 8px 12px; background: #F8FAFC; border-top: 1px solid #E2E8F0;
+  display: flex; justify-content: flex-end;
+}
+.sc-popup-link {
+  font-size: 12px; font-weight: 600; color: #2563EB;
+  text-decoration: none; padding: 4px 10px; border-radius: 5px;
+  background: #EFF6FF; border: 1px solid #BFDBFE;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.sc-popup-link:hover { background: #DBEAFE; }
+
+/* フォーカスリング */
+.sc-popup-close:focus-visible,
+.sc-popup-link:focus-visible {
+  outline: 2px solid #3B82F6;
+  outline-offset: 2px;
+}
+.sc-popup-select:focus-visible {
+  outline: none;
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+}
