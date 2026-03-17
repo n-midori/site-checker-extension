@@ -31,22 +31,6 @@
   font-weight: 800;
 }
 
-#sc-list-btn, #sc-close-btn {
-  background: none;
-  border: 1px solid #334155;
-  border-radius: 5px;
-  color: #94A3B8;
-  padding: 4px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-}
-#sc-list-btn { margin-left: auto; }
-#sc-list-btn:hover, #sc-close-btn:hover {
-  background: #1E293B;
-  color: #F8FAFC;
-}
 
 /* ── ポイントマーカー（絶対座標） ────────────────────────── */
 #sc-marker {
@@ -248,8 +232,6 @@
 /* ── フォーカスリング ──────────────────────────────────── */
 .sc-btn:focus-visible,
 .sc-form-close:focus-visible,
-#sc-list-btn:focus-visible,
-#sc-close-btn:focus-visible,
 .sc-panel-close:focus-visible {
   outline: 2px solid #3B82F6;
   outline-offset: 2px;

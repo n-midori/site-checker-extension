@@ -48,13 +48,8 @@
     toolbar.innerHTML = `
       <span id="sc-toolbar-icon">✓</span>
       <span>SiteCheck — クリックまたはドラッグで指摘箇所を選択</span>
-      <button id="sc-list-btn">📋 一覧</button>
-      <button id="sc-close-btn">✕ 終了</button>
     `;
     document.body.appendChild(toolbar);
-
-    document.getElementById("sc-close-btn").addEventListener("click", deactivate);
-    document.getElementById("sc-list-btn").addEventListener("click", toggleSidePanel);
 
     document.body.style.paddingTop = "44px";
   }
@@ -84,6 +79,10 @@
       window.dispatchEvent(new CustomEvent("sitecheck:close-popup"));
       return;
     }
+
+    // テキスト選択を無効化（ドラッグ中のスクリーンショットに映り込まないように）
+    document.body.style.userSelect = "none";
+    document.body.style.webkitUserSelect = "none";
 
     // ドラッグ開始の準備
     dragStart = { clientX: e.clientX, clientY: e.clientY, target: e.target };
@@ -172,6 +171,10 @@
 
     dragStart = null;
     isDragging = false;
+
+    // テキスト選択を元に戻す
+    document.body.style.userSelect = "";
+    document.body.style.webkitUserSelect = "";
   }
 
   // ── 選択矩形表示 ─────────────────────────────────────────
@@ -203,6 +206,9 @@
     } else {
       showMarker(data.absX, data.absY);
     }
+
+    // テキスト選択状態をクリア（スクリーンショットに映り込まないように）
+    window.getSelection().removeAllRanges();
 
     chrome.runtime.sendMessage({ type: "CAPTURE_SCREENSHOT" }, (res) => {
       if (chrome.runtime.lastError || res?.error) {
@@ -550,14 +556,6 @@
   }
 
   // ── サイドパネル（サイドバー） ────────────────────────────
-  function toggleSidePanel() {
-    if (sidePanelOpen) {
-      closeSidePanel();
-    } else {
-      openSidePanel();
-    }
-  }
-
   function openSidePanel() {
     if (sidePanel) return;
     sidePanelOpen = true;
@@ -609,7 +607,7 @@
 
     requestAnimationFrame(() => sidePanel.classList.add("sc-panel-open"));
 
-    document.getElementById("sc-panel-close").addEventListener("click", closeSidePanel);
+    document.getElementById("sc-panel-close").addEventListener("click", deactivate);
     document.getElementById("sc-panel-filter-status").addEventListener("change", renderPanelList);
     document.getElementById("sc-panel-filter-assignee").addEventListener("change", renderPanelList);
 
@@ -745,18 +743,13 @@
   document.addEventListener("mousemove", onMouseMove, true);
   document.addEventListener("mouseup", onMouseUp, true);
 
-  // サイドバー状態を復元（ページ遷移後の自動表示）
-  chrome.storage.local.get("sidebarOpen", (result) => {
-    if (result.sidebarOpen) {
-      // issues が読み込まれるまで少し待つ
-      const waitForIssues = () => {
-        if (window.__sitecheck_issues && window.__sitecheck_issues.length >= 0) {
-          openSidePanel();
-        } else {
-          setTimeout(waitForIssues, 200);
-        }
-      };
-      setTimeout(waitForIssues, 500);
+  // 拡張機能ON時にサイドバーを自動表示（issuesの読み込みを待つ）
+  const waitForIssuesAndOpenSidebar = () => {
+    if (window.__sitecheck_issues !== undefined) {
+      openSidePanel();
+    } else {
+      setTimeout(waitForIssuesAndOpenSidebar, 200);
     }
-  });
+  };
+  setTimeout(waitForIssuesAndOpenSidebar, 500);
 })();
