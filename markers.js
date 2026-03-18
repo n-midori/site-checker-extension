@@ -55,8 +55,8 @@
     const scY = params.get("sc_y");
 
     if (scId && scX && scY) {
-      const x = parseInt(scX, 10);
-      const y = parseInt(scY, 10);
+      const x = parseFloat(scX);
+      const y = parseFloat(scY);
       const pageW = document.documentElement.scrollWidth;
       const pageH = document.documentElement.scrollHeight;
       const absX = (x / 100) * pageW;

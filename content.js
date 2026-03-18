@@ -233,8 +233,8 @@
       captureAndShowForm({
         clientX: centerX, clientY: centerY,
         absX, absY,
-        percentX: Math.round((absX / pageW) * 100),
-        percentY: Math.round((absY / pageH) * 100),
+        percentX: Math.round((absX / pageW) * 10000) / 100,
+        percentY: Math.round((absY / pageH) * 10000) / 100,
         cropRect: { x1, y1, x2, y2 },
         rectViewport: { x1, y1, x2, y2 },
       });
@@ -262,8 +262,8 @@
       captureAndShowForm({
         clientX: e.clientX, clientY: e.clientY,
         absX, absY,
-        percentX: Math.round((absX / pageW) * 100),
-        percentY: Math.round((absY / pageH) * 100),
+        percentX: Math.round((absX / pageW) * 10000) / 100,
+        percentY: Math.round((absY / pageH) * 10000) / 100,
         cropRect: null,
         rectViewport: null,
       });
@@ -414,7 +414,7 @@
     form.innerHTML = `
       <div class="sc-form-header">
         <span class="sc-form-title">修正依頼を作成</span>
-        <span class="sc-coord-badge" style="margin-left:auto;margin-right:8px">X:${clickData.percentX}% Y:${clickData.percentY}%</span>
+        <span class="sc-coord-badge" style="margin-left:auto;margin-right:8px">X:${Math.round(clickData.percentX)}% Y:${Math.round(clickData.percentY)}%</span>
         <button class="sc-form-close" id="sc-form-close">✕</button>
       </div>
       <div class="sc-screenshot-preview">
@@ -424,7 +424,7 @@
               style="display:${hasScreenshot ? 'none' : 'flex'};align-items:center;justify-content:center;width:100%;height:100%;color:#475569;font-size:12px">
           キャプチャ中…
         </span>
-        <div class="sc-coord-badge">X:${clickData.percentX}% Y:${clickData.percentY}%</div>
+        <div class="sc-coord-badge">X:${Math.round(clickData.percentX)}% Y:${Math.round(clickData.percentY)}%</div>
       </div>
       <div class="sc-form-body">
         <label class="sc-label">タイトル <span class="sc-required">*</span></label>
