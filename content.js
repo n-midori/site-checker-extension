@@ -1,6 +1,15 @@
 (() => {
-  // 二重注入ガード
-  if (window.__sitecheck_active) return;
+  // 二重注入ガード（拡張機能更新時は古いUI要素をクリーンアップして再初期化）
+  if (window.__sitecheck_active) {
+    if (document.getElementById("sc-toolbar")) return; // 現行バージョンが稼働中
+    // 拡張機能更新後: 旧UIの残骸を除去
+    ["sc-side-panel", "sc-form", "sc-marker", "sc-rect-marker", "sc-toast"].forEach(id => {
+      document.getElementById(id)?.remove();
+    });
+    document.querySelectorAll(".sc-issue-popup").forEach(el => el.remove());
+    document.body.style.paddingTop = "";
+    document.body.style.marginRight = "";
+  }
   window.__sitecheck_active = true;
 
   // ── Supabase 設定 ────────────────────────────────────────

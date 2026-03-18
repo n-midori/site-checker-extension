@@ -8,6 +8,12 @@ chrome.storage.local.get("activeTabIds", (result) => {
   }
 });
 
+// 拡張機能インストール/更新時にactiveTabIdsをクリア（旧content scriptは無効化されているため）
+chrome.runtime.onInstalled.addListener(() => {
+  activeTabIds.clear();
+  persistState();
+});
+
 function persistState() {
   chrome.storage.local.set({ activeTabIds: [...activeTabIds] });
 }
