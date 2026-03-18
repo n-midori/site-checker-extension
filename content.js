@@ -43,6 +43,7 @@
   let sidePanelOpen = false;
   let clickData = null;
   let isActive = true;
+  let sortByPriority = false;
 
   // プロジェクト関連
   let selectedProjectId = null;
@@ -141,7 +142,7 @@
 
   function updateToolbarCounts() {
     const el = document.getElementById("sc-toolbar-counts");
-    if (el) el.textContent = `プロジェクト全体：未完了${projectOpenCount}件 / 全${projectTotalCount}件`;
+    if (el) el.textContent = `未完了${projectOpenCount}件 / 全${projectTotalCount}件`;
   }
 
   function updateProjectSelector() {
@@ -162,15 +163,37 @@
       </div>
       <div class="sc-toolbar-right">
         <span class="sc-toolbar-label">修正依頼一覧</span>
-        <span class="sc-toolbar-counts" id="sc-toolbar-counts">プロジェクト全体：未完了0件 / 全0件</span>
+        <select class="sc-toolbar-project-select" id="sc-project-select">
+          <option value="">プロジェクトを選択</option>
+        </select>
+        <span class="sc-toolbar-counts" id="sc-toolbar-counts">未完了0件 / 全0件</span>
         <button class="sc-toolbar-close" id="sc-toolbar-close">✕</button>
       </div>
     `;
     document.body.appendChild(toolbar);
 
     document.getElementById("sc-toolbar-close").addEventListener("click", deactivate);
+    document.getElementById("sc-project-select").addEventListener("change", onProjectChange);
 
     document.body.style.paddingTop = "44px";
+  }
+
+  function onProjectChange(e) {
+    const val = e.target.value;
+    const opt = e.target.selectedOptions[0];
+    if (val) {
+      selectedProjectId = parseInt(val, 10);
+      selectedProjectCode = opt?.dataset?.code || null;
+    } else {
+      selectedProjectId = null;
+      selectedProjectCode = null;
+    }
+    chrome.storage.local.set({ selectedProjectId, selectedProjectCode });
+    window.__sitecheck_project_members = [];
+    fetchProjectStatuses().then(() => {
+      fetchProjectCounts();
+      window.dispatchEvent(new CustomEvent("sitecheck:refresh"));
+    });
   }
 
   // ── UI要素の判定 ──────────────────────────────────────────
@@ -691,20 +714,11 @@
 
     sidePanel = document.createElement("div");
     sidePanel.id = "sc-side-panel";
-    const projectOpts = projectsList.map(p =>
-      `<option value="${p.id}" data-code="${p.code}" ${p.id === selectedProjectId ? 'selected' : ''}>${p.name}</option>`
-    ).join("");
 
     // ページ別件数テキスト生成
     const pageStatsText = buildPageStatsText(issues);
 
     sidePanel.innerHTML = `
-      <div class="sc-panel-project-row">
-        <select class="sc-panel-filter" id="sc-project-select" style="flex:1;font-weight:600">
-          <option value="">プロジェクトを選択</option>
-          ${projectOpts}
-        </select>
-      </div>
       <div class="sc-panel-page-stats" id="sc-panel-page-stats">${pageStatsText}</div>
       <div class="sc-panel-filters">
         <select class="sc-panel-filter" id="sc-panel-filter-status">
@@ -718,6 +732,7 @@
         <select class="sc-panel-filter" id="sc-panel-filter-assignee">
           <option value="">すべての担当者</option>
         </select>
+        <button class="sc-panel-sort-btn" id="sc-panel-sort-priority" title="優先度順でソート">優先度順</button>
       </div>
       <div class="sc-panel-list" id="sc-panel-list">
         <div class="sc-panel-loading">読み込み中…</div>
@@ -731,22 +746,10 @@
 
     document.getElementById("sc-panel-filter-status").addEventListener("change", renderPanelList);
     document.getElementById("sc-panel-filter-assignee").addEventListener("change", renderPanelList);
-    document.getElementById("sc-project-select").addEventListener("change", (e) => {
-      const val = e.target.value;
-      const opt = e.target.selectedOptions[0];
-      if (val) {
-        selectedProjectId = parseInt(val, 10);
-        selectedProjectCode = opt?.dataset?.code || null;
-      } else {
-        selectedProjectId = null;
-        selectedProjectCode = null;
-      }
-      chrome.storage.local.set({ selectedProjectId, selectedProjectCode });
-      window.__sitecheck_project_members = []; // プロジェクト変更時にメンバーキャッシュをクリア
-      fetchProjectStatuses().then(() => {
-        fetchProjectCounts();
-        window.dispatchEvent(new CustomEvent("sitecheck:refresh"));
-      });
+    document.getElementById("sc-panel-sort-priority").addEventListener("click", (e) => {
+      sortByPriority = !sortByPriority;
+      e.target.classList.toggle("sc-panel-sort-active", sortByPriority);
+      renderPanelList();
     });
 
     populateAssigneeFilter();
@@ -818,6 +821,12 @@
     let filtered = issues;
     if (filterStatus) filtered = filtered.filter(i => i.status === filterStatus);
     if (filterAssignee) filtered = filtered.filter(i => i.assignee === filterAssignee);
+
+    // ソート: デフォルトはy順（ページ上の位置順）、優先度順トグル時は 高→中→低
+    if (sortByPriority) {
+      const prioOrder = { "高": 0, "中": 1, "低": 2 };
+      filtered = [...filtered].sort((a, b) => (prioOrder[a.priority] ?? 9) - (prioOrder[b.priority] ?? 9));
+    }
 
     if (filtered.length === 0) {
       listEl.innerHTML = `<div class="sc-panel-empty">条件に一致する修正依頼がありません</div>`;

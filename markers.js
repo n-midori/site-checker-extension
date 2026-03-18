@@ -115,7 +115,7 @@
   async function fetchIssuesForUrl() {
     const currentUrl = window.location.origin + window.location.pathname;
     const projectId = await getSelectedProjectId();
-    let query = `url=eq.${encodeURIComponent(currentUrl)}&select=id,title,detail,status,assignee,reporter,priority,x,y&order=id`;
+    let query = `url=eq.${encodeURIComponent(currentUrl)}&select=id,title,detail,status,assignee,reporter,priority,x,y,screenshot_url&order=y.asc`;
     if (projectId) query += `&project_id=eq.${projectId}`;
     try {
       const res = await fetch(
@@ -127,7 +127,7 @@
     } catch (e) {
       try {
         const fullUrl = window.location.href.split("?")[0];
-        let query2 = `url=eq.${encodeURIComponent(fullUrl)}&select=id,title,detail,status,assignee,reporter,priority,x,y&order=id`;
+        let query2 = `url=eq.${encodeURIComponent(fullUrl)}&select=id,title,detail,status,assignee,reporter,priority,x,y,screenshot_url&order=y.asc`;
         if (projectId) query2 += `&project_id=eq.${projectId}`;
         const res = await fetch(
           `${SUPABASE_URL}/rest/v1/issues?${query2}`,
@@ -201,17 +201,6 @@
     activePopup = document.createElement("div");
     activePopup.className = "sc-issue-popup";
 
-    const vpX = absX - window.scrollX;
-    const vpY = absY - window.scrollY;
-    let left = vpX + 20;
-    let top = vpY - 10;
-    if (left + 300 > window.innerWidth) left = vpX - 320;
-    if (top + 280 > window.innerHeight) top = window.innerHeight - 290;
-    if (top < 10) top = 10;
-
-    activePopup.style.left = left + "px";
-    activePopup.style.top = top + "px";
-
     // ステータス options
     const statusOpts = STATUSES.map(s =>
       `<option value="${s}" ${issue.status === s ? "selected" : ""}>${s}</option>`
@@ -223,7 +212,10 @@
         `<option value="${m.name}" ${issue.assignee === m.name ? "selected" : ""}>${m.name}</option>`
       ).join("");
 
+    const adminHref = projectCode ? `${ADMIN_URL}/projects/${projectCode}?issue=${issue.id}` : `${ADMIN_URL}?issue=${issue.id}`;
+
     activePopup.innerHTML = `
+      ${issue.screenshot_url ? `<img class="sc-popup-screenshot" src="${issue.screenshot_url}" alt="screenshot" />` : ''}
       <div class="sc-popup-header">
         <span class="sc-popup-id">#${issue.id}</span>
         <span class="sc-popup-priority-badge sc-priority-${issue.priority}">${issue.priority}</span>
@@ -246,11 +238,25 @@
         </div>
       </div>
       <div class="sc-popup-footer">
-        <a href="${projectCode ? `${ADMIN_URL}/projects/${projectCode}?issue=${issue.id}` : `${ADMIN_URL}?issue=${issue.id}`}" target="_blank" rel="noopener noreferrer" class="sc-popup-link">
+        <a href="${adminHref}" target="_blank" rel="noopener noreferrer" class="sc-popup-link">
           管理画面で開く →
         </a>
       </div>
     `;
+
+    // 位置計算（画面内に収める）
+    const vpX = absX - window.scrollX;
+    const vpY = absY - window.scrollY;
+    const popW = 280;
+    let left = vpX + 20;
+    let top = vpY - 10;
+    if (left + popW > window.innerWidth) left = vpX - popW - 20;
+    if (left < 5) left = 5;
+    if (top + 320 > window.innerHeight) top = window.innerHeight - 330;
+    if (top < 5) top = 5;
+
+    activePopup.style.left = left + "px";
+    activePopup.style.top = top + "px";
 
     document.body.appendChild(activePopup);
 
