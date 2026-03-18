@@ -98,6 +98,14 @@
     });
   }
 
+  async function getSelectedProjectCode() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get("selectedProjectCode", (result) => {
+        resolve(result.selectedProjectCode || null);
+      });
+    });
+  }
+
   // ── Supabaseから該当URLの修正依頼を取得 ──────────────────
   async function fetchIssuesForUrl() {
     const currentUrl = window.location.origin + window.location.pathname;
@@ -182,6 +190,7 @@
     closePopup();
 
     const members = await fetchMembers();
+    const projectCode = await getSelectedProjectCode();
     const sc = STATUS_COLOR[issue.status] || STATUS_COLOR["未対応"];
 
     activePopup = document.createElement("div");
@@ -232,7 +241,7 @@
         </div>
       </div>
       <div class="sc-popup-footer">
-        <a href="${ADMIN_URL}?issue=${issue.id}" target="_blank" rel="noopener noreferrer" class="sc-popup-link">
+        <a href="${projectCode ? `${ADMIN_URL}/projects/${projectCode}?issue=${issue.id}` : `${ADMIN_URL}?issue=${issue.id}`}" target="_blank" rel="noopener noreferrer" class="sc-popup-link">
           管理画面で開く →
         </a>
       </div>
