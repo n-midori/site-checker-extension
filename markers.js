@@ -165,7 +165,7 @@
       el.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
-        showIssuePopup(issue, absX, absY);
+        showIssuePopup(issue, absX, absY, el);
       });
 
       document.body.appendChild(el);
@@ -191,7 +191,7 @@
   }
 
   // ── 修正依頼ポップアップ表示（拡充版） ────────────────────
-  async function showIssuePopup(issue, absX, absY) {
+  async function showIssuePopup(issue, absX, absY, markerEl) {
     closePopup();
 
     const members = await fetchMembers();
@@ -215,26 +215,28 @@
     const adminHref = projectCode ? `${ADMIN_URL}/projects/${projectCode}?issue=${issue.id}` : `${ADMIN_URL}?issue=${issue.id}`;
 
     activePopup.innerHTML = `
-      ${issue.screenshot_url ? `<img class="sc-popup-screenshot" src="${issue.screenshot_url}" alt="screenshot" />` : ''}
-      <div class="sc-popup-header">
-        <span class="sc-popup-id">#${issue.id}</span>
-        <span class="sc-popup-priority-badge sc-priority-${issue.priority}">${issue.priority}</span>
-        <button class="sc-popup-close">✕</button>
-      </div>
-      <div class="sc-popup-title">${issue.title}</div>
-      ${issue.detail ? `<div class="sc-popup-detail">${issue.detail.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
-      <div class="sc-popup-fields">
-        <div class="sc-popup-field">
-          <label class="sc-popup-label">ステータス</label>
-          <select class="sc-popup-select" id="sc-popup-status">
-            ${statusOpts}
-          </select>
+      <div class="sc-popup-body">
+        ${issue.screenshot_url ? `<img class="sc-popup-screenshot" src="${issue.screenshot_url}" alt="screenshot" />` : ''}
+        <div class="sc-popup-header">
+          <span class="sc-popup-id">#${issue.id}</span>
+          <span class="sc-popup-priority-badge sc-priority-${issue.priority}">${issue.priority}</span>
+          <button class="sc-popup-close">✕</button>
         </div>
-        <div class="sc-popup-field">
-          <label class="sc-popup-label">担当者</label>
-          <select class="sc-popup-select" id="sc-popup-assignee">
-            ${assigneeOpts}
-          </select>
+        <div class="sc-popup-title">${issue.title}</div>
+        ${issue.detail ? `<div class="sc-popup-detail">${issue.detail.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` : ''}
+        <div class="sc-popup-fields">
+          <div class="sc-popup-field">
+            <label class="sc-popup-label">ステータス</label>
+            <select class="sc-popup-select" id="sc-popup-status">
+              ${statusOpts}
+            </select>
+          </div>
+          <div class="sc-popup-field">
+            <label class="sc-popup-label">担当者</label>
+            <select class="sc-popup-select" id="sc-popup-assignee">
+              ${assigneeOpts}
+            </select>
+          </div>
         </div>
       </div>
       <div class="sc-popup-footer">
@@ -244,19 +246,33 @@
       </div>
     `;
 
-    // 位置計算（画面内に収める）
-    const vpX = absX - window.scrollX;
-    const vpY = absY - window.scrollY;
-    const popW = 280;
-    let left = vpX + 20;
-    let top = vpY - 10;
-    if (left + popW > window.innerWidth) left = vpX - popW - 20;
-    if (left < 5) left = 5;
-    if (top + 320 > window.innerHeight) top = window.innerHeight - 330;
-    if (top < 5) top = 5;
+    // 位置計算: マーカーのBoundingClientRectからviewport座標を取得
+    let mcx, mcy;
+    if (markerEl) {
+      const rect = markerEl.getBoundingClientRect();
+      mcx = rect.left + rect.width / 2;
+      mcy = rect.top + rect.height / 2;
+    } else {
+      mcx = absX - window.scrollX;
+      mcy = absY - window.scrollY;
+    }
 
-    activePopup.style.left = left + "px";
-    activePopup.style.top = top + "px";
+    const popW = 280;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // 左右: マーカーがviewport中央より右→左に開く、左→右に開く
+    if (mcx > vw / 2) {
+      activePopup.style.right = (vw - mcx + 16) + "px";
+    } else {
+      activePopup.style.left = (mcx + 16) + "px";
+    }
+    // 上下: マーカーがviewport中央より下→上に開く、上→下に開く
+    if (mcy > vh / 2) {
+      activePopup.style.bottom = (vh - mcy + 16) + "px";
+    } else {
+      activePopup.style.top = (mcy + 16) + "px";
+    }
 
     document.body.appendChild(activePopup);
 
@@ -335,7 +351,7 @@
     // ポップアップも表示
     const issue = window.__sitecheck_issues.find(i => i.id == issueId);
     if (issue) {
-      setTimeout(() => showIssuePopup(issue, x, y), 400);
+      setTimeout(() => showIssuePopup(issue, x, y, markerEl), 400);
     }
   };
 

@@ -149,7 +149,7 @@
     const sel = document.getElementById("sc-project-select");
     if (!sel) return;
     sel.innerHTML = '<option value="">プロジェクトを選択</option>' +
-      projectsList.map(p => `<option value="${p.id}" data-code="${p.code}" ${p.id === selectedProjectId ? 'selected' : ''}>${p.name}</option>`).join("");
+      projectsList.map(p => `<option value="${p.id}" data-code="${p.code}" ${p.id === selectedProjectId ? 'selected' : ''}>${p.code}</option>`).join("");
   }
 
   // ── ツールバー作成 ─────────────────────────────────────────
