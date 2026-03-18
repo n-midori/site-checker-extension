@@ -417,7 +417,7 @@
     const hasScreenshot = clickData?.croppedScreenshot;
     const savedReporter = localStorage.getItem("sitecheck_reporter") || "";
 
-    const members = window.__sitecheck_members || [];
+    const members = window.__sitecheck_project_members || [];
     const assigneeOpts = members.map(m => `<option value="${m.name}">${m.name}</option>`).join("");
 
     form.innerHTML = `
@@ -478,19 +478,20 @@
     document.getElementById("sc-input-title").focus();
 
     if (members.length === 0) {
-      fetchMembersForForm();
+      fetchProjectMembersForForm();
     }
   }
 
-  async function fetchMembersForForm() {
+  async function fetchProjectMembersForForm() {
+    if (!selectedProjectId) return;
     try {
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/members?select=id,name,role&order=id`,
+        `${SUPABASE_URL}/rest/v1/project_members?project_id=eq.${selectedProjectId}&select=id,name,role&order=id`,
         { headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` } }
       );
       if (!res.ok) return;
       const members = await res.json();
-      window.__sitecheck_members = members;
+      window.__sitecheck_project_members = members;
       const sel = document.getElementById("sc-input-assignee");
       if (!sel) return;
       members.forEach(m => {
@@ -731,6 +732,7 @@
         selectedProjectCode = null;
       }
       chrome.storage.local.set({ selectedProjectId, selectedProjectCode });
+      window.__sitecheck_project_members = []; // プロジェクト変更時にメンバーキャッシュをクリア
       fetchProjectStatuses().then(() => {
         fetchProjectCounts();
         window.dispatchEvent(new CustomEvent("sitecheck:refresh"));
