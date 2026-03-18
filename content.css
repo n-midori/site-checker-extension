@@ -358,24 +358,25 @@
 
 
 .sc-panel-filters {
-  display: flex; gap: 8px; padding: 8px 12px;
+  display: flex; gap: 4px; padding: 8px 10px;
   border-bottom: 1px solid #E2E8F0; flex-shrink: 0;
+  align-items: center;
 }
 .sc-panel-filter {
-  flex: 1; border: 1px solid #E2E8F0; border-radius: 6px;
-  padding: 5px 8px; font-size: 11px; font-family: inherit;
+  flex: 1; min-width: 0; border: 1px solid #E2E8F0; border-radius: 5px;
+  padding: 4px 4px; font-size: 10px; font-family: inherit;
   color: #374151; background: #fff; outline: none; cursor: pointer;
   box-sizing: border-box;
 }
 .sc-panel-filter:focus { border-color: #3B82F6; }
 
 .sc-panel-sort-btn {
-  flex-shrink: 0; border: 1px solid #E2E8F0; border-radius: 6px;
-  padding: 5px 8px; font-size: 11px; font-family: inherit;
-  color: #94A3B8; background: #fff; cursor: pointer;
-  font-weight: 600; white-space: nowrap;
+  flex-shrink: 0; border: 1px solid #D1D5DB; border-radius: 5px;
+  padding: 4px 6px; font-size: 10px; font-family: inherit;
+  color: #6B7280; background: #F9FAFB; cursor: pointer;
+  font-weight: 700; white-space: nowrap; line-height: 1.2;
 }
-.sc-panel-sort-btn:hover { background: #F8FAFC; color: #374151; }
+.sc-panel-sort-btn:hover { background: #E5E7EB; color: #374151; }
 .sc-panel-sort-active { background: #2563EB; color: #fff; border-color: #2563EB; }
 .sc-panel-sort-active:hover { background: #1D4ED8; color: #fff; }
 
