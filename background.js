@@ -1,17 +1,19 @@
 // ── 状態管理（chrome.storage.localで永続化） ────────────────
 const activeTabIds = new Set();
-
-// 起動時に保存済みの状態を復元
-chrome.storage.local.get("activeTabIds", (result) => {
-  if (result.activeTabIds) {
-    result.activeTabIds.forEach(id => activeTabIds.add(id));
-  }
-});
+let installed = false;
 
 // 拡張機能インストール/更新時にactiveTabIdsをクリア（旧content scriptは無効化されているため）
 chrome.runtime.onInstalled.addListener(() => {
+  installed = true;
   activeTabIds.clear();
-  persistState();
+  chrome.storage.local.set({ activeTabIds: [] });
+});
+
+// 起動時に保存済みの状態を復元（install/update時はスキップ）
+chrome.storage.local.get("activeTabIds", (result) => {
+  if (!installed && result.activeTabIds) {
+    result.activeTabIds.forEach(id => activeTabIds.add(id));
+  }
 });
 
 function persistState() {
@@ -41,6 +43,15 @@ chrome.action.onClicked.addListener(async (tab) => {
 // ── content script を注入 ────────────────────────────────────
 async function injectContentScript(tabId) {
   try {
+    // markers.js も注入（拡張機能更新後は manifest content_scripts が再注入されないため）
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      files: ["markers.js"],
+    });
+    await chrome.scripting.insertCSS({
+      target: { tabId },
+      files: ["markers.css"],
+    });
     await chrome.scripting.executeScript({
       target: { tabId },
       files: ["content.js"],

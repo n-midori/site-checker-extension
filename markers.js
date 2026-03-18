@@ -1,4 +1,9 @@
 (() => {
+  // 再注入ガード: 旧インスタンスのマーカーとリスナーをクリーンアップ
+  if (window.__sc_markers_cleanup) {
+    window.__sc_markers_cleanup();
+  }
+
   // ── Supabase 設定 ────────────────────────────────────────
   const SUPABASE_URL = "https://mmqfyzuaqbsibpojuedc.supabase.co";
   const SUPABASE_ANON_KEY =
@@ -301,7 +306,8 @@
   }
 
   // content.js のオーバーレイ枠外クリックからポップアップを閉じる
-  window.addEventListener("sitecheck:close-popup", closePopup);
+  const onClosePopup = () => closePopup();
+  window.addEventListener("sitecheck:close-popup", onClosePopup);
 
   // ── マーカーへスクロール（サイドパネルから呼び出し用） ────
   window.__sitecheck_scrollToIssue = function (issueId) {
@@ -338,10 +344,21 @@
   }
 
   // content.js から送信後のリフレッシュイベント
-  window.addEventListener("sitecheck:refresh", async () => {
+  const onRefresh = async () => {
     const issues = await fetchIssuesForUrl();
     renderIssueMarkers(issues);
-  });
+  };
+  window.addEventListener("sitecheck:refresh", onRefresh);
+
+  // クリーンアップ関数を登録（再注入時に旧インスタンスを安全に破棄）
+  window.__sc_markers_cleanup = () => {
+    existingMarkers.forEach(el => el.remove());
+    existingMarkers = [];
+    closePopup();
+    window.removeEventListener("sitecheck:close-popup", onClosePopup);
+    window.removeEventListener("sitecheck:refresh", onRefresh);
+    document.querySelectorAll(".sc-highlight-marker").forEach(el => el.remove());
+  };
 
   if (document.readyState === "complete" || document.readyState === "interactive") {
     setTimeout(init, 100);

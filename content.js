@@ -1,9 +1,18 @@
 (() => {
-  // 二重注入ガード（拡張機能更新時は古いUI要素をクリーンアップして再初期化）
+  // 二重注入ガード
+  // 同一インスタンスが稼働中なら何もしない
+  if (window.__sitecheck_active && window.__sc_instanceAlive) return;
+  // 拡張機能更新後の再注入: 旧インスタンスのUI・イベントをクリーンアップ
   if (window.__sitecheck_active) {
-    if (document.getElementById("sc-toolbar")) return; // 現行バージョンが稼働中
-    // 拡張機能更新後: 旧UIの残骸を除去
-    ["sc-side-panel", "sc-form", "sc-marker", "sc-rect-marker", "sc-toast"].forEach(id => {
+    if (window.__sc_handlers) {
+      document.removeEventListener("mousedown", window.__sc_handlers.md, true);
+      document.removeEventListener("mousemove", window.__sc_handlers.mm, true);
+      document.removeEventListener("mouseup", window.__sc_handlers.mu, true);
+    }
+    if (window.__sc_msgListener) {
+      try { chrome.runtime.onMessage.removeListener(window.__sc_msgListener); } catch (e) {}
+    }
+    ["sc-toolbar", "sc-side-panel", "sc-form", "sc-marker", "sc-rect-marker", "sc-toast"].forEach(id => {
       document.getElementById(id)?.remove();
     });
     document.querySelectorAll(".sc-issue-popup").forEach(el => el.remove());
@@ -11,6 +20,7 @@
     document.body.style.marginRight = "";
   }
   window.__sitecheck_active = true;
+  window.__sc_instanceAlive = true;
 
   // ── Supabase 設定 ────────────────────────────────────────
   const SUPABASE_URL = "https://mmqfyzuaqbsibpojuedc.supabase.co";
@@ -864,19 +874,25 @@
     document.body.style.paddingTop = "";
     document.body.style.marginRight = "";
     window.__sitecheck_active = false;
+    window.__sc_instanceAlive = false;
+    window.__sc_handlers = null;
+    window.__sc_msgListener = null;
     chrome.runtime.sendMessage({ type: "DEACTIVATE_SELF" });
   }
 
   // ── background からのメッセージ ───────────────────────────
-  chrome.runtime.onMessage.addListener((msg) => {
+  const messageListener = (msg) => {
     if (msg.type === "DEACTIVATE") deactivate();
-  });
+  };
+  window.__sc_msgListener = messageListener;
+  chrome.runtime.onMessage.addListener(messageListener);
 
   // ── 起動 ──────────────────────────────────────────────────
   createToolbar();
   document.addEventListener("mousedown", onMouseDown, true);
   document.addEventListener("mousemove", onMouseMove, true);
   document.addEventListener("mouseup", onMouseUp, true);
+  window.__sc_handlers = { md: onMouseDown, mm: onMouseMove, mu: onMouseUp };
 
   // プロジェクト選択状態を復元してからサイドバーを自動表示
   chrome.storage.local.get(["selectedProjectId", "selectedProjectCode"], (result) => {
